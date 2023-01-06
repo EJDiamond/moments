@@ -1,19 +1,21 @@
-import Post from './Post'
 import React, { useEffect, useState } from "react";
 
 import Form from "react-bootstrap/Form";
 import Col from "react-bootstrap/Col";
 import Row from "react-bootstrap/Row";
 import Container from "react-bootstrap/Container";
-import Asset from '../../components/Asset';
+
+import Post from "./Post";
+import Asset from "../../components/Asset";
 
 import appStyles from "../../App.module.css";
 import styles from "../../styles/PostsPage.module.css";
-import { useLocation } from "react-router-dom";
-import { axiosReq } from '../../api/axiosDefaults'
+import { useLocation } from "react-router";
+import { axiosReq } from "../../api/axiosDefaults";
 
-import NoResults from '../../assets/no-results.png'
-import { FormControl } from 'react-bootstrap';
+import NoResults from "../../assets/no-results.png";
+import InfiniteScroll from "react-infinite-scroll-component";
+import { fetchMoreData } from "../../utils/utils";
 
 function PostsPage({ message, filter = "" }) {
   const [posts, setPosts] = useState({ results: [] });
@@ -25,11 +27,11 @@ function PostsPage({ message, filter = "" }) {
   useEffect(() => {
     const fetchPosts = async () => {
       try {
-        const { data } = await axiosReq.get(`/posts/?${filter}search=${query}`)
-        setPosts(data)
-        setHasLoaded(true)
+        const { data } = await axiosReq.get(`/posts/?${filter}search=${query}`);
+        setPosts(data);
+        setHasLoaded(true);
       } catch (err) {
-        console.log(err)
+        console.log(err);
       }
     };
 
@@ -37,10 +39,10 @@ function PostsPage({ message, filter = "" }) {
     const timer = setTimeout(() => {
       fetchPosts();
     }, 1000);
+
     return () => {
       clearTimeout(timer);
     };
-    fetchPosts();
   }, [filter, query, pathname]);
 
   return (
@@ -52,22 +54,32 @@ function PostsPage({ message, filter = "" }) {
           className={styles.SearchBar}
           onSubmit={(event) => event.preventDefault()}
         >
-          <FormControl
+          <Form.Control
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             type="text"
             className="mr-sm-2"
-            placeholder='Search posts'/>
+            placeholder="Search posts"
+          />
         </Form>
+
         {hasLoaded ? (
           <>
-            {posts.results.length
-              ? posts.results.map((post) => (
-                <Post key={post.id} {...post} setPosts={setPosts} />
-              ))
-              : <Container className={appStyles.Content}>
+            {posts.results.length ? (
+              <InfiniteScroll
+                children={posts.results.map((post) => (
+                  <Post key={post.id} {...post} setPosts={setPosts} />
+                ))}
+                dataLength={posts.results.length}
+                loader={<Asset spinner />}
+                hasMore={!!posts.next}
+                next={() => fetchMoreData(posts, setPosts)}
+              />
+            ) : (
+              <Container className={appStyles.Content}>
                 <Asset src={NoResults} message={message} />
-              </Container>}
+              </Container>
+            )}
           </>
         ) : (
           <Container className={appStyles.Content}>
